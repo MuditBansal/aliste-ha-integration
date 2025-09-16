@@ -22,16 +22,12 @@ class AlisteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            username = user_input["username"]
-            password = user_input["password"]
-
-            # Optionally add check for credentials here
-
+            # Optionally could validate credentials here
             return self.async_create_entry(
-                title=username,
+                title=user_input["username"],
                 data={
-                    "username": username,
-                    "password": password,
+                    "username": user_input["username"],
+                    "password": user_input["password"],
                 },
             )
 
@@ -39,8 +35,4 @@ class AlisteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        from .options_flow import AlisteOptionsFlow
-        return AlisteOptionsFlow(config_entry)
+    # Removed async_get_options_flow since no options_flow.py exists

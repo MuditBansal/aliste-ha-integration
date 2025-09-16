@@ -6,20 +6,14 @@ from .const import DOMAIN
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Aliste from a config entry."""
-    # Store API client instance in hass.data for platforms to access
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = AlisteAPI(
         entry.data["username"],
         entry.data["password"],
     )
-    
-    # Load platforms (switch, fan, etc.)
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "switch")
-    )
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "fan")
-    )
+
+    await hass.config_entries.async_forward_entry_setup(entry, "switch")
+    await hass.config_entries.async_forward_entry_setup(entry, "fan")
 
     return True
 
