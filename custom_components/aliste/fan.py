@@ -1,118 +1,44 @@
-import logging
 from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .const import DOMAIN, APPLIANCE_FAN
 
-from .api import AlisteAPI
-from .const import DOMAIN
+SPEED_MAP = {"off": "0", "low": "25", "medium": "50", "high": "75", "max": "100"}
 
-_LOGGER = logging.getLogger(__name__)
+async def async_setup_entry(hass, entry, add_entities):
+    store = hass.data[DOMAIN][entry.entry_id]
+    coord = store["coordinator"]
+    fans   = []
 
-async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback):
-    """Set up Aliste fans."""
-    api = hass.data[DOMAIN][entry.entry_id]
-
-    # Use executor job for blocking API calls
-    houses = await hass.async_add_executor_job(api.get_house_id)
-    if not houses or "houses" not in houses or not houses["houses"]:
-        _LOGGER.error("No houses found for the user")
-        return
-
-    house_id = houses["houses"]["houseId"]
-
-    # Fetch rooms using executor job
-    rooms_resp = await hass.async_add_executor_job(api.get_rooms, house_id)
-    rooms = rooms_resp.get("rooms", [])
-
-    fans = []
-
-    for room in rooms:
-        room_id = room["roomId"]
-        appliances_resp = await hass.async_add_executor_job(api.get_appliances, room_id)
-        appliances = appliances_resp.get("data", {}).get("appliancesData", [])
-
-        for appliance in appliances:
-            appliance_type = appliance.get("applianceType")
-            if appliance_type == 20:  # Fan type
-                fans.append(AlisteFan(api, appliance, room))
-
-    async_add_entities(fans, update_before_add=True)
-
+    for room in coord.data["rooms"]:
+        for app in coord.data["devices"][room["_id"]]:
+            if app["applianceType"] == APPLIANCE_FAN:
+                fans.append(AlisteFan(store["api"], coord, room["_id"], app))
+    add_entities(fans)
 
 class AlisteFan(FanEntity):
-    def __init__(self, api: AlisteAPI, appliance: dict, room: dict):
-        self._api = api
-        self._appliance = appliance
-        self._room = room
-        self._speed = int(appliance.get("state", "0"))
-        self._attr_name = appliance.get("name", "Aliste Fan")
-        self._unique_id = f"aliste_fan_{appliance.get('deviceId')}_{appliance.get('switchId')}"
+    _attr_supported_features = FanEntityFeature.SET_SPEED
+    _attr_speed_list = list(SPEED_MAP)
 
+    def __init__(self, api, coord, room_id, app):
+        self._api, self._coord = api, coord
+        self._room_id, self._app = room_id, app
+        self._attr_unique_id = f"{app['deviceId']}_{app['switchId']}"
+        self._attr_name = app["name"]
+
+    # -------------- SPEED --------------
     @property
-    def unique_id(self):
-        return self._unique_id
-
-    @property
-    def name(self):
-        return self._attr_name
-
-    @property
-    def speed(self):
-        speed_percent = self._speed
-        if speed_percent == 0:
-            return "off"
-        elif speed_percent <= 25:
-            return "low"
-        elif speed_percent <= 50:
-            return "medium"
-        elif speed_percent <= 75:
-            return "high"
-        else:
-            return "max"
-
-    @property
-    def speed_list(self):
-        return ["off", "low", "medium", "high", "max"]
-
-    @property
-    def supported_features(self):
-        return FanEntityFeature.SET_SPEED
-
-    async def async_turn_on(self, **kwargs):
-        await self.async_set_speed("max")
-
-    async def async_turn_off(self, **kwargs):
-        await self.async_set_speed("off")
+    def percentage(self): return int(self._app["state"])
 
     async def async_set_speed(self, speed):
-        speed_map = {
-            "off": "0",
-            "low": "25",
-            "medium": "50",
-            "high": "75",
-            "max": "100",
-        }
-        command_value = speed_map.get(speed, "0")
-        await self.hass.async_add_executor_job(
-            self._api.execute_action,
-            self._appliance["deviceId"],
-            str(self._appliance["switchId"]),
-            command_value,
-        )
-        self._speed = int(command_value)
-        self.schedule_update_ha_state()
+        cmd = SPEED_MAP.get(speed, "0")
+        await self.hass.async_add_executor_job(self._api.action, self._app["deviceId"], self._app["switchId"], cmd)
+        await self._coord.async_request_refresh()
 
+    async def async_turn_on(self, **_):  await self.async_set_speed("max")
+    async def async_turn_off(self, **_): await self.async_set_speed("off")
+
+    # -------------- UPDATE --------------
     async def async_update(self):
-        """Fetch latest state from API using executor."""
-        appliances_resp = await self.hass.async_add_executor_job(
-            self._api.get_appliances,
-            self._room["roomId"]
-        )
-        appliances = appliances_resp.get("data", {}).get("appliancesData", [])
-        for appl in appliances:
-            if (
-                appl["deviceId"] == self._appliance["deviceId"]
-                and appl["switchId"] == self._appliance["switchId"]
-            ):
-                self._speed = int(appl.get("state", "0"))
+        for a in self._coord.data["devices"][self._room_id]:
+            if a["deviceId"] == self._app["deviceId"] and a["switchId"] == self._app["switchId"]:
+                self._app = a
                 break
