@@ -15,7 +15,7 @@ This custom integration for Home Assistant allows you to control your Aliste Tec
 
 \*   Home Assistant installation (version 2023.x.x or later recommended).
 \*   An active Aliste Technologies account with API access.
-\*   Your Aliste API `username`, `password`, and `key\_id` for authentication.
+\*   Your Aliste API `username` and `password` for authentication.
 
 \## Installation
 

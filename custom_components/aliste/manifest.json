@@ -1,14 +1,14 @@
 {
   "domain": "aliste",
-  "name": "Aliste Home Automation",
-  "version": "1.0.6",
-  "documentation": "https://github.com/<yourusername>/aliste-ha-integration",
+  "name": "Aliste Home Automation - HA",
+  "version": "1.0.7",
+  "documentation": "https://github.com/MuditBansal/aliste-ha-integration",
   "requirements": [
     "requests"
   ],
   "dependencies": [],
   "codeowners": [
-    "@<yourusername>"
+    "KarlKaxi"
   ],
   "config_flow": true,
   "iot_class": "cloud_polling"

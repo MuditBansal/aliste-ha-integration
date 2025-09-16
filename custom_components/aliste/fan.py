@@ -12,23 +12,23 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
     """Set up Aliste fans."""
     api = hass.data[DOMAIN][entry.entry_id]
 
-    # Fetch houses - take first house
-    houses = api.get_house_id()
+    # Use executor job for blocking API calls
+    houses = await hass.async_add_executor_job(api.get_house_id)
     if not houses or "houses" not in houses or not houses["houses"]:
         _LOGGER.error("No houses found for the user")
         return
 
-    house_id = houses["houses"][0]["houseId"]
+    house_id = houses["houses"]["houseId"]
 
-    # Fetch rooms
-    rooms_resp = api.get_rooms(house_id)
+    # Fetch rooms using executor job
+    rooms_resp = await hass.async_add_executor_job(api.get_rooms, house_id)
     rooms = rooms_resp.get("rooms", [])
 
     fans = []
 
     for room in rooms:
         room_id = room["roomId"]
-        appliances_resp = api.get_appliances(room_id)
+        appliances_resp = await hass.async_add_executor_job(api.get_appliances, room_id)
         appliances = appliances_resp.get("data", {}).get("appliancesData", [])
 
         for appliance in appliances:
@@ -103,7 +103,11 @@ class AlisteFan(FanEntity):
         self.schedule_update_ha_state()
 
     async def async_update(self):
-        appliances_resp = self._api.get_appliances(self._room["roomId"])
+        """Fetch latest state from API using executor."""
+        appliances_resp = await self.hass.async_add_executor_job(
+            self._api.get_appliances,
+            self._room["roomId"]
+        )
         appliances = appliances_resp.get("data", {}).get("appliancesData", [])
         for appl in appliances:
             if (
