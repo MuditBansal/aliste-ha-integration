@@ -9,7 +9,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("username"): str,
         vol.Required("password"): str,
-        vol.Required("key_id"): int,
     }
 )
 
@@ -20,22 +19,19 @@ class AlisteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     async def async_step_user(self, user_input=None) -> FlowResult:
-        """Handle the initial step."""
         errors = {}
 
         if user_input is not None:
             username = user_input["username"]
             password = user_input["password"]
-            key_id = user_input["key_id"]
 
-            # Here you could add a preliminary validation by trying to renew token or get houses
-            # For brevity, assume success
+            # Optionally add check for credentials here
+
             return self.async_create_entry(
                 title=username,
                 data={
                     "username": username,
                     "password": password,
-                    "key_id": key_id,
                 },
             )
 
