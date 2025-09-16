@@ -22,7 +22,7 @@ class AlisteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Optionally could validate credentials here
+            # You could add asynchronous credential validation here if desired
             return self.async_create_entry(
                 title=user_input["username"],
                 data={
@@ -35,4 +35,8 @@ class AlisteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
-    # Removed async_get_options_flow since no options_flow.py exists
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        from .options_flow import AlisteOptionsFlow
+        return AlisteOptionsFlow(config_entry)

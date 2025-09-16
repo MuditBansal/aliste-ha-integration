@@ -12,7 +12,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data["password"],
     )
 
-    # Forward setup to switch and fan platforms together
+    # Forward setup to multiple platforms using async_forward_entry_setups (plural)
     await hass.config_entries.async_forward_entry_setups(entry, ["switch", "fan"])
 
     return True
