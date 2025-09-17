@@ -1,8 +1,8 @@
 {
   "domain": "aliste",
   "name": "Aliste Home Automation - HA",
-  "version": "1.1.0",
-  "documentation": "https://github.com/<yourusername>/aliste-ha-integration",
+  "version": "1.1.1",
+  "documentation": "https://github.com/MuditBansal/aliste-ha-integration",
   "requirements": ["requests"],
   "codeowners": ["@KarlKaxi"],
   "config_flow": true,

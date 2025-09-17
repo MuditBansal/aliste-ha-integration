@@ -11,14 +11,14 @@ _LOG = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Aliste integration."""
     cred = entry.options or entry.data
-    api  = AlisteAPI(cred["username"], cred["password"])
+    api = AlisteAPI(cred["username"], cred["password"])
 
     async def _refresh():
         try:
-            houses   = await hass.async_add_executor_job(api.houses)
+            houses = await hass.async_add_executor_job(api.houses)
             house_id = houses["data"]["houses"][0]["_id"]
-            rooms    = await hass.async_add_executor_job(api.rooms, house_id)
-            devices  = {}
+            rooms = await hass.async_add_executor_job(api.rooms, house_id)
+            devices = {}
             for r in rooms["data"]["rooms"]:
                 apps = await hass.async_add_executor_job(api.appliances, r["_id"])
                 devices[r["_id"]] = apps["data"]["appliancesData"]
@@ -35,6 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"api": api, "coordinator": coord}
 
+    # Listen for options updates
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     await hass.config_entries.async_forward_entry_setups(entry, ["switch", "fan"])
     return True
 
@@ -42,3 +45,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     await hass.config_entries.async_unload_platforms(entry, ["switch", "fan"])
     hass.data[DOMAIN].pop(entry.entry_id)
     return True
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Reload the integration when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
