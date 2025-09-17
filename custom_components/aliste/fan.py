@@ -89,29 +89,38 @@ class AlisteFan(CoordinatorEntity, FanEntity):
             await self.hass.async_add_executor_job(
                 self._api.action, self._device_id, str(self._switch_id), command
             )
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.0)  # Give API more time
             await self.coordinator.async_request_refresh()
+            # Don't clear local state until we get confirmation
+            await asyncio.sleep(0.5)
             self._local_state = None
-        except Exception:
+            self.async_write_ha_state()
+        except Exception as e:
             # Revert on error
             current_app = self._get_current_appliance()
             if current_app:
                 self._local_state = COMMAND_TO_SPEED.get(current_app["state"], 0)
+            else:
+                self._local_state = None
             self.async_write_ha_state()
+            raise e
 
     async def async_turn_on(self, percentage=None, **kwargs):
-        """Turn on the fan."""
-        if percentage is None:
-            # Default to 100% when turning on
-            await self.async_set_percentage(100)
-        else:
-            await self.async_set_percentage(percentage)
+        """Turn on the fan - FIXED METHOD."""
+        target_percentage = percentage if percentage is not None else 100
+        await self.async_set_percentage(target_percentage)
 
     async def async_turn_off(self, **kwargs):
-        """Turn off the fan."""
+        """Turn off the fan - FIXED METHOD."""
         await self.async_set_percentage(0)
 
     def _handle_coordinator_update(self):
         """Handle coordinator update."""
-        self._local_state = None
+        # Only clear local state if coordinator data matches our expected state
+        if self._local_state is not None:
+            current_app = self._get_current_appliance()
+            if current_app:
+                actual_speed = COMMAND_TO_SPEED.get(current_app["state"], 0)
+                if actual_speed == self._local_state:
+                    self._local_state = None
         super()._handle_coordinator_update()
