@@ -3,7 +3,7 @@
   "name": "Aliste Home Automation - HA",
   "version": "1.2.0",
   "documentation": "https://github.com/MuditBansal/aliste-ha-integration",
-  "image": "https://play-lh.googleusercontent.com/LvlLGTI0411-mL1ERiZA-gaNFH53Dm6Hvul0rgmDWihfD1IqpWr4BE740jttJnjDTw",
+  "image": "https://raw.githubusercontent.com/MuditBansal/aliste-ha-integration/refs/heads/main/images.jfif",
   "requirements": ["requests"],
   "codeowners": ["@MuditBansal"],
   "config_flow": true,
