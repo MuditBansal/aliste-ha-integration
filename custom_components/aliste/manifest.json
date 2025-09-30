@@ -1,7 +1,7 @@
 {
   "domain": "aliste",
   "name": "Aliste Home Automation - HA",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "documentation": "https://github.com/MuditBansal/aliste-ha-integration",
   "image": "https://raw.githubusercontent.com/MuditBansal/aliste-ha-integration/refs/heads/main/images.jfif",
   "requirements": ["requests"],

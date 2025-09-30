@@ -89,38 +89,38 @@ class AlisteFan(CoordinatorEntity, FanEntity):
             await self.hass.async_add_executor_job(
                 self._api.action, self._device_id, str(self._switch_id), command
             )
-            await asyncio.sleep(1.0)  # Give API more time
+            await asyncio.sleep(1.0)  # Give API time to update
             await self.coordinator.async_request_refresh()
-            # Don't clear local state until we get confirmation
+            # Wait for confirmation via coordinator update
             await asyncio.sleep(0.5)
             self._local_state = None
             self.async_write_ha_state()
-        except Exception as e:
+        except Exception:
             # Revert on error
             current_app = self._get_current_appliance()
             if current_app:
-                self._local_state = COMMAND_TO_SPEED.get(current_app["state"], 0)
+                self._local_state = COMMAND_TO_SPEED.get(current_app.get("state", "0"), 0)
             else:
                 self._local_state = None
             self.async_write_ha_state()
-            raise e
+            raise
 
     async def async_turn_on(self, percentage=None, **kwargs):
-        """Turn on the fan - FIXED METHOD."""
-        target_percentage = percentage if percentage is not None else 100
-        await self.async_set_percentage(target_percentage)
+        """Turn on the fan with default speed 50% if not specified."""
+        if percentage is None:
+            percentage = 50
+        await self.async_set_percentage(percentage)
 
     async def async_turn_off(self, **kwargs):
-        """Turn off the fan - FIXED METHOD."""
+        """Turn off the fan by setting speed to 0%."""
         await self.async_set_percentage(0)
 
     def _handle_coordinator_update(self):
-        """Handle coordinator update."""
-        # Only clear local state if coordinator data matches our expected state
+        """Handle coordinator update and clear local overrides if state matches."""
         if self._local_state is not None:
             current_app = self._get_current_appliance()
             if current_app:
-                actual_speed = COMMAND_TO_SPEED.get(current_app["state"], 0)
+                actual_speed = COMMAND_TO_SPEED.get(current_app.get("state", "0"), 0)
                 if actual_speed == self._local_state:
                     self._local_state = None
         super()._handle_coordinator_update()
