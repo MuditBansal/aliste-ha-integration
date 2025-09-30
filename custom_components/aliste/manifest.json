@@ -5,7 +5,7 @@
   "documentation": "https://github.com/MuditBansal/aliste-ha-integration",
   "image": "https://www.alistetechnologies.com/images/logoo.webp",
   "requirements": ["requests"],
-  "codeowners": ["@KarlKaxi"],
+  "codeowners": ["@MuditBansal"],
   "config_flow": true,
   "iot_class": "cloud_polling"
 }

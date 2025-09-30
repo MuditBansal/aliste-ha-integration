@@ -41,12 +41,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                     apps = await hass.async_add_executor_job(api.appliances, r.get("_id"))
                 except Exception as ex:
                     _LOGGER.error(f"Error fetching appliances for room {r.get('roomName', r.get('_id'))}: {ex}")
+                    devices[r["_id"]] = []
                     continue
                 app_data = apps.get("data", {})
-                app_list = app_data.get("appliancesData", [])
-                if not app_list:
-                    _LOGGER.error(f"Room {r.get('roomName', r.get('_id'))} has empty appliances: {apps}")
-                    continue
+                app_list = app_data.get("appliancesData") or []
                 devices[r["_id"]] = app_list
             return {"house": house_id, "rooms": room_list, "devices": devices}
         except Exception as err:
