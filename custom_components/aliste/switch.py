@@ -50,7 +50,48 @@ class AlisteSwitch(CoordinatorEntity, SwitchEntity):
             pass
         return None
 
-    async def async_turn_on(self, **_):
+    # async def async_turn_on(self, **_):
+    #     # Set pending state immediately for instant UI feedback
+    #     self._pending_state = True
+    #     self.async_write_ha_state()
+        
+    #     try:
+    #         # Execute the command
+    #         result = await self.hass.async_add_executor_job(
+    #             self._api.action, self._device_id, str(self._switch_id), "100"
+    #         )
+            
+    #         # Check if API call was successful
+    #         if result.get("success", False):
+    #             self._local_state = True
+    #             self._pending_state = None
+    #             self.async_write_ha_state()
+                
+    #             # Wait for state to propagate, then refresh
+    #             await asyncio.sleep(1.0)
+    #             await self.coordinator.async_request_refresh()
+                
+    #             # Give coordinator time to update
+    #             await asyncio.sleep(0.5)
+    #             # Only clear local state if coordinator confirms the change
+    #             current_app = self._get_current_appliance()
+    #             if current_app and int(current_app["state"]) > 0:
+    #                 self._local_state = None
+    #                 self.async_write_ha_state()
+    #         else:
+    #             # API call failed, revert state
+    #             self._pending_state = None
+    #             self._local_state = False
+    #             self.async_write_ha_state()
+                
+    #     except Exception as e:
+    #         # Revert state on error
+    #         self._pending_state = None
+    #         self._local_state = False
+    #         self.async_write_ha_state()
+    #         raise e
+
+    async def async_turn_on(self, **kwargs):
         # Set pending state immediately for instant UI feedback
         self._pending_state = True
         self.async_write_ha_state()
@@ -84,12 +125,20 @@ class AlisteSwitch(CoordinatorEntity, SwitchEntity):
                 self._local_state = False
                 self.async_write_ha_state()
                 
+        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+            _LOGGER.warning(f"Aliste API unreachable - stored state ON: {e}")
+            # DON'T crash automation - assume success for now
+            self._local_state = True
+            self._pending_state = None
+            self.async_write_ha_state()
         except Exception as e:
-            # Revert state on error
+            _LOGGER.error(f"Unexpected switch error: {e}")
+            # Revert state on other errors
             self._pending_state = None
             self._local_state = False
             self.async_write_ha_state()
-            raise e
+            # DON'T raise - let automation continue
+
 
     async def async_turn_off(self, **_):
         # Set pending state immediately for instant UI feedback

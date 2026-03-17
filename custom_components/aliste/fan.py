@@ -71,12 +71,44 @@ class AlisteFan(CoordinatorEntity, FanEntity):
             return 0
         return ranged_value_to_percentage(SPEED_RANGE, speed_level)
 
+    # async def async_set_percentage(self, percentage: int):
+    #     """Set fan speed by percentage - converts to discrete steps."""
+    #     if percentage == 0:
+    #         speed_level = 0
+    #     else:
+    #         # Convert percentage to discrete speed level
+    #         speed_level = int(percentage_to_ranged_value(SPEED_RANGE, percentage))
+        
+    #     command = SPEED_TO_COMMAND[speed_level]
+        
+    #     # Set local state immediately
+    #     self._local_state = speed_level
+    #     self.async_write_ha_state()
+        
+    #     try:
+    #         await self.hass.async_add_executor_job(
+    #             self._api.action, self._device_id, str(self._switch_id), command
+    #         )
+    #         await asyncio.sleep(1.0)  # Give API time to update
+    #         await self.coordinator.async_request_refresh()
+    #         # Wait for confirmation via coordinator update
+    #         await asyncio.sleep(0.5)
+    #         self._local_state = None
+    #         self.async_write_ha_state()
+    #     except Exception:
+    #         # Revert on error
+    #         current_app = self._get_current_appliance()
+    #         if current_app:
+    #             self._local_state = COMMAND_TO_SPEED.get(current_app.get("state", "0"), 0)
+    #         else:
+    #             self._local_state = None
+    #         self.async_write_ha_state()
+    #         raise
+
     async def async_set_percentage(self, percentage: int):
-        """Set fan speed by percentage - converts to discrete steps."""
         if percentage == 0:
             speed_level = 0
         else:
-            # Convert percentage to discrete speed level
             speed_level = int(percentage_to_ranged_value(SPEED_RANGE, percentage))
         
         command = SPEED_TO_COMMAND[speed_level]
@@ -89,24 +121,30 @@ class AlisteFan(CoordinatorEntity, FanEntity):
             await self.hass.async_add_executor_job(
                 self._api.action, self._device_id, str(self._switch_id), command
             )
-            await asyncio.sleep(1.0)  # Give API time to update
+            await asyncio.sleep(1.0)
             await self.coordinator.async_request_refresh()
-            # Wait for confirmation via coordinator update
             await asyncio.sleep(0.5)
             self._local_state = None
             self.async_write_ha_state()
-        except Exception:
-            # Revert on error
+        except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+            _LOGGER.warning(f"Aliste fan API unreachable - stored speed {speed_level}: {e}")
+            # DON'T crash - assume success for now
+            self._local_state = speed_level
+        except Exception as e:
+            _LOGGER.error(f"Fan set_percentage error: {e}")
+            # Revert on other errors
             current_app = self._get_current_appliance()
             if current_app:
                 self._local_state = COMMAND_TO_SPEED.get(current_app.get("state", "0"), 0)
             else:
                 self._local_state = None
             self.async_write_ha_state()
-            raise
+            # DON'T raise - let automation continue
+
 
     async def async_turn_on(self, percentage=None, **kwargs):
         """Turn on the fan with default speed 50% if not specified."""
+        _LOGGER.debug(f"✅ async_turn_on CALLED on {self.entity_id}")
         if percentage is None:
             percentage = 50
         await self.async_set_percentage(percentage)
